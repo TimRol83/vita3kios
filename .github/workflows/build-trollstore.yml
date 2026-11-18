@@ -1,0 +1,80 @@
+name: Build Vita3K TrollStore TIPA (iOS 15)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+env:
+  IPHONEOS_DEPLOYMENT_TARGET: '15.0'
+  CMAKE_OSX_DEPLOYMENT_TARGET: '15.0'
+
+jobs:
+  build-tipa:
+    name: Vita3K.app -> .tipa (iOS 15)
+    runs-on: macos-26
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build tools (cmake, ninja, ldid, pkg-config)
+        run: |
+          brew update
+          brew install cmake ninja ldid pkg-config autoconf automake libtool nasm
+
+      - name: Cache Vita3K dependencies and FullCore
+        id: cache-core
+        uses: actions/cache@v4
+        with:
+          path: |
+            Build/Dependencies
+            Build/Core
+          key: vita3k-ios15-core-${{ hashFiles('Scripts/*.sh', 'Patches/**/*', 'Toolchains/*') }}
+
+      - name: Bootstrap dependencies
+        run: |
+          chmod +x Scripts/*.sh
+          Scripts/bootstrap.sh
+
+      - name: Build Vita3K iOS App (Unsigned for TrollStore)
+        run: |
+          VITA3KIOS_FULL_CORE=YES VITA3KIOS_SIGNING=NO Scripts/build-app.sh device
+
+      - name: Sign with ldid and pack .tipa
+        run: |
+          APP_PATH=$(find Build/App/device -name "vita3kios.app" -type d | head -n 1)
+          echo "Found app at: $APP_PATH"
+          test -n "$APP_PATH"
+
+          cat << 'PLIST' > entitlements.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://apple.com">
+          <plist version="1.0">
+          <dict>
+            <key>get-task-allow</key>
+            <true/>
+            <key>dynamic-codesigning</key>
+            <true/>
+            <key>com.apple.private.security.no-sandbox</key>
+            <true/>
+            <key>platform-application</key>
+            <true/>
+          </dict>
+          </plist>
+          PLIST
+
+          ldid -Sentitlements.plist "$APP_PATH/vita3kios"
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          zip -qr Vita3K-iOS15.tipa Payload
+
+      - name: Upload TrollStore .tipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vita3K-iOS15-tipa
+          path: Vita3K-iOS15.tipa
+          retention-days: 30
