@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 
 struct GameplayView: View {
-    @Bindable var core: CoreStatusModel
+    @ObservedObject var core: CoreStatusModel
     let game: GameLibraryItem
     let close: () -> Void
 
@@ -333,7 +333,7 @@ private struct TouchButton: View {
         }
         .font(.caption.bold())
         .frame(width: 42, height: 42)
-        .foregroundStyle(color)
+        .foregroundColor(color)
         .background(.black.opacity(pressed ? 0.72 : 0.42), in: Circle())
         .overlay(Circle().stroke(.white.opacity(pressed ? 0.7 : 0.3), lineWidth: 1))
         .scaleEffect(pressed ? 0.92 : 1)

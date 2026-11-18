@@ -2,10 +2,10 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @Bindable var core: CoreStatusModel
+    @ObservedObject var core: CoreStatusModel
 
     var body: some View {
-        NavigationStack {
+        NavigationView {
             List {
                 Section("Boot") {
                     Label("Direct Game", systemImage: "play.fill")
@@ -13,30 +13,30 @@ struct SettingsView: View {
                 }
 
                 Section("Firmware") {
-                    LabeledContent("Version", value: core.firmwareVersion)
-                    LabeledContent("Direct Game firmware", value: core.firmwareReady ? "Available" : "Optional")
-                    LabeledContent("System Software shell", value: core.systemSoftwareReady ? "Ready" : "Not ready")
-                    LabeledContent("PUP validation", value: availability(CoreCapability.firmwarePUPPreflight))
-                    LabeledContent("PUP installation", value: availability(CoreCapability.firmwarePUPInstall))
-                    LabeledContent("Partition inventory", value: availability(CoreCapability.firmwareInventory))
-                    LabeledContent("Shell preflight", value: availability(CoreCapability.systemShellPreflight))
+                    HStack { Text("Version"); Spacer(); Text(core.firmwareVersion).foregroundColor(.secondary) }
+                    HStack { Text("Direct Game firmware"); Spacer(); Text(core.firmwareReady ? "Available" : "Optional").foregroundColor(.secondary) }
+                    HStack { Text("System Software shell"); Spacer(); Text(core.systemSoftwareReady ? "Ready" : "Not ready").foregroundColor(.secondary) }
+                    HStack { Text("PUP validation"); Spacer(); Text(availability(CoreCapability.firmwarePUPPreflight).foregroundColor(.secondary) })
+                    HStack { Text("PUP installation"); Spacer(); Text(availability(CoreCapability.firmwarePUPInstall).foregroundColor(.secondary) })
+                    HStack { Text("Partition inventory"); Spacer(); Text(availability(CoreCapability.firmwareInventory).foregroundColor(.secondary) })
+                    HStack { Text("Shell preflight"); Spacer(); Text(availability(CoreCapability.systemShellPreflight).foregroundColor(.secondary) })
                 }
 
                 Section("Core") {
-                    LabeledContent("ABI version", value: "\(core.abiVersion)")
-                    LabeledContent("Architecture", value: core.platform)
-                    LabeledContent("Direct Game", value: availability(CoreCapability.directGame))
-                    LabeledContent("System Software", value: availability(CoreCapability.systemSoftware))
-                    LabeledContent("Game inventory", value: availability(CoreCapability.gameInventory))
-                    LabeledContent("Direct Game preflight", value: availability(CoreCapability.directGamePreflight))
-                    LabeledContent("Native display surface", value: availability(CoreCapability.displaySurface))
+                    HStack { Text("ABI version"); Spacer(); Text("\(core.abiVersion).foregroundColor(.secondary) }")
+                    HStack { Text("Architecture"); Spacer(); Text(core.platform).foregroundColor(.secondary) }
+                    HStack { Text("Direct Game"); Spacer(); Text(availability(CoreCapability.directGame).foregroundColor(.secondary) })
+                    HStack { Text("System Software"); Spacer(); Text(availability(CoreCapability.systemSoftware).foregroundColor(.secondary) })
+                    HStack { Text("Game inventory"); Spacer(); Text(availability(CoreCapability.gameInventory).foregroundColor(.secondary) })
+                    HStack { Text("Direct Game preflight"); Spacer(); Text(availability(CoreCapability.directGamePreflight).foregroundColor(.secondary) })
+                    HStack { Text("Native display surface"); Spacer(); Text(availability(CoreCapability.displaySurface).foregroundColor(.secondary) })
                 }
 
                 Section("Interface") {
-                    LabeledContent("Design", value: "Apple Native")
-                    LabeledContent("Accent", value: "PlayStation-inspired")
-                    LabeledContent("Touch controls", value: availability(CoreCapability.inputState))
-                    LabeledContent("Performance HUD", value: "Top-left · Compact")
+                    HStack { Text("Design"); Spacer(); Text("Apple Native").foregroundColor(.secondary) }
+                    HStack { Text("Accent"); Spacer(); Text("PlayStation-inspired").foregroundColor(.secondary) }
+                    HStack { Text("Touch controls"); Spacer(); Text(availability(CoreCapability.inputState).foregroundColor(.secondary) })
+                    HStack { Text("Performance HUD"); Spacer(); Text("Top-left · Compact").foregroundColor(.secondary) }
                 }
 
                 Section {

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CoreStatusCard: View {
-    @Bindable var core: CoreStatusModel
+    @ObservedObject var core: CoreStatusModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -9,9 +9,7 @@ struct CoreStatusCard: View {
                 Label("Core Diagnostics", systemImage: "waveform.path.ecg")
                     .font(.headline)
                 Spacer()
-                Button("Refresh", systemImage: "arrow.clockwise") {
-                    core.refresh()
-                }
+                Button(action: { core.refresh() }) { Label("Refresh", systemImage: "arrow.clockwise") }
                 .labelStyle(.iconOnly)
             }
 
@@ -19,12 +17,12 @@ struct CoreStatusCard: View {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
             } else {
-                LabeledContent("Core ABI", value: "v\(core.abiVersion)")
-                LabeledContent("Vita3K", value: core.upstreamVersion)
-                LabeledContent("Platform", value: core.platform)
-                LabeledContent("Upstream commit", value: short(core.upstreamCommit))
-                LabeledContent("Allocator self-test", value: core.allocatorTestPassed ? "Passed" : "Failed")
-                    .foregroundStyle(core.allocatorTestPassed ? Color.primary : Color.red)
+                HStack { Text("Core ABI"); Spacer(); Text("v\(core.abiVersion).foregroundColor(.secondary) }")
+                HStack { Text("Vita3K"); Spacer(); Text(core.upstreamVersion).foregroundColor(.secondary) }
+                HStack { Text("Platform"); Spacer(); Text(core.platform).foregroundColor(.secondary) }
+                HStack { Text("Upstream commit"); Spacer(); Text(short(core.upstreamCommit).foregroundColor(.secondary) })
+                HStack { Text("Allocator self-test"); Spacer(); Text(core.allocatorTestPassed ? "Passed" : "Failed").foregroundColor(.secondary) }
+                    .foregroundColor(core.allocatorTestPassed ? Color.primary : Color.red)
             }
         }
         .padding(16)

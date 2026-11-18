@@ -1,5 +1,5 @@
 import Foundation
-import Observation
+import Combine
 import QuartzCore
 
 private final class CoreHandleStorage {
@@ -13,44 +13,43 @@ private final class CoreHandleStorage {
     }
 }
 
-@Observable
 @MainActor
-final class CoreStatusModel {
-    @ObservationIgnored private let core = CoreHandleStorage()
-    @ObservationIgnored private var directBootRequestGeneration: String?
-    @ObservationIgnored private var firstGuestFrameReported = false
+final class CoreStatusModel: ObservableObject {
+    private let core = CoreHandleStorage()
+    private var directBootRequestGeneration: String?
+    private var firstGuestFrameReported = false
 
-    private(set) var abiVersion: UInt32 = 0
-    private(set) var capabilities: UInt64 = 0
-    private(set) var vita3kiosCommit = "Unavailable"
-    private(set) var upstreamCommit = "Unavailable"
-    private(set) var upstreamVersion = "Unavailable"
-    private(set) var platform = "Unavailable"
-    private(set) var allocatorTestPassed = false
-    private(set) var reportWritten = false
-    private(set) var jitEnabled = false
-    private(set) var firmwareBusy = false
-    private(set) var firmwareReady = false
-    private(set) var systemSoftwareReady = false
-    private(set) var firmwareVersion = "Not installed"
-    private(set) var firmwareGeneration = ""
-    private(set) var firmwarePartitions: UInt32 = 0
-    private(set) var firmwareFileCount: UInt32 = 0
-    private(set) var firmwareBytes: UInt64 = 0
-    private(set) var shellPath = ""
-    private(set) var firmwareDetail = "Firmware is optional for Direct Game compatibility and required for System Software research."
-    private(set) var games: [GameLibraryItem] = []
-    private(set) var gameImportBusy = false
-    private(set) var gameLibraryBusy = false
-    private(set) var activeGame: GameLibraryItem?
-    private(set) var directBootCheckpoint = "Not started"
-    private(set) var directBootBlocker = "No boot attempt"
-    private(set) var directBootDetail = ""
-    private(set) var metrics = PerformanceMetrics()
-    private(set) var bootCheckpoint = "Not started"
-    private(set) var bootBlocker = "No boot attempt"
-    private(set) var bootDetail = ""
-    private(set) var error: String?
+    @Published private(set) var abiVersion: UInt32 = 0
+    @Published private(set) var capabilities: UInt64 = 0
+    @Published private(set) var vita3kiosCommit = "Unavailable"
+    @Published private(set) var upstreamCommit = "Unavailable"
+    @Published private(set) var upstreamVersion = "Unavailable"
+    @Published private(set) var platform = "Unavailable"
+    @Published private(set) var allocatorTestPassed = false
+    @Published private(set) var reportWritten = false
+    @Published private(set) var jitEnabled = false
+    @Published private(set) var firmwareBusy = false
+    @Published private(set) var firmwareReady = false
+    @Published private(set) var systemSoftwareReady = false
+    @Published private(set) var firmwareVersion = "Not installed"
+    @Published private(set) var firmwareGeneration = ""
+    @Published private(set) var firmwarePartitions: UInt32 = 0
+    @Published private(set) var firmwareFileCount: UInt32 = 0
+    @Published private(set) var firmwareBytes: UInt64 = 0
+    @Published private(set) var shellPath = ""
+    @Published private(set) var firmwareDetail = "Firmware is optional for Direct Game compatibility and required for System Software research."
+    @Published private(set) var games: [GameLibraryItem] = []
+    @Published private(set) var gameImportBusy = false
+    @Published private(set) var gameLibraryBusy = false
+    @Published private(set) var activeGame: GameLibraryItem?
+    @Published private(set) var directBootCheckpoint = "Not started"
+    @Published private(set) var directBootBlocker = "No boot attempt"
+    @Published private(set) var directBootDetail = ""
+    @Published private(set) var metrics = PerformanceMetrics()
+    @Published private(set) var bootCheckpoint = "Not started"
+    @Published private(set) var bootBlocker = "No boot attempt"
+    @Published private(set) var bootDetail = ""
+    @Published private(set) var error: String?
 
     init() {
         refresh()

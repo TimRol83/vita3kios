@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 
 struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
-    @Bindable var core: CoreStatusModel
+    @ObservedObject var core: CoreStatusModel
     @State private var showingSettings = false
     @State private var showingPUPImporter = false
     @State private var showingVitaFSImporter = false
@@ -12,7 +12,7 @@ struct RootView: View {
     @State private var presentedGame: GameLibraryItem?
 
     var body: some View {
-        NavigationStack {
+        NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     header
@@ -28,9 +28,7 @@ struct RootView: View {
             .navigationTitle("Library")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Settings", systemImage: "gearshape") {
-                        showingSettings = true
-                    }
+                    Button(action: { showingSettings = true }) { Label("Settings", systemImage: "gearshape") }
                 }
             }
             .sheet(isPresented: $showingSettings) {
@@ -75,12 +73,12 @@ struct RootView: View {
                 guard ProcessInfo.processInfo.arguments.contains("--automation-boot-first-game"),
                       presentedGame == nil else { return }
                 while core.gameLibraryBusy {
-                    try? await Task.sleep(for: .milliseconds(50))
+                    try? await Task.sleep(nanoseconds: 50_000_000)
                 }
-                try? await Task.sleep(for: .seconds(1))
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
                 presentedGame = core.games.first
             }
-            .onChange(of: scenePhase) { _, phase in
+            .onChange(of: scenePhase) { phase in
                 if phase == .active {
                     core.refreshJITStatus()
                 }
@@ -166,14 +164,14 @@ struct RootView: View {
                 .foregroundStyle(.secondary)
 
             if core.firmwareFileCount > 0 {
-                LabeledContent("Direct Game", value: core.firmwareReady ? "Ready" : "Not ready")
+                HStack { Text("Direct Game"); Spacer(); Text(core.firmwareReady ? "Ready" : "Not ready").foregroundColor(.secondary) }
                     .font(.subheadline)
-                LabeledContent("System Software", value: core.systemSoftwareReady ? "Shell ready" : "Shell prerequisites missing")
+                HStack { Text("System Software"); Spacer(); Text(core.systemSoftwareReady ? "Shell ready" : "Shell prerequisites missing").foregroundColor(.secondary) }
                     .font(.subheadline)
-                LabeledContent("Inventory", value: "\(core.firmwareFileCount) files · \(ByteCountFormatter.string(fromByteCount: Int64(core.firmwareBytes), countStyle: .file))")
+                HStack { Text("Inventory"); Spacer(); Text("\(core.firmwareFileCount).foregroundColor(.secondary) } files · \(ByteCountFormatter.string(fromByteCount: Int64(core.firmwareBytes), countStyle: .file))")
                     .font(.subheadline)
                 if !core.shellPath.isEmpty {
-                    LabeledContent("Shell", value: core.shellPath)
+                    HStack { Text("Shell"); Spacer(); Text(core.shellPath).foregroundColor(.secondary) }
                         .font(.caption)
                 }
             }
@@ -185,19 +183,15 @@ struct RootView: View {
             }
 
             HStack {
-                Menu("Import Firmware", systemImage: "square.and.arrow.down") {
-                    Button("Install Official PUP", systemImage: "checkmark.shield") {
-                        showingPUPImporter = true
-                    }
-                    Button("Import Extracted VitaFS", systemImage: "folder") {
-                        showingVitaFSImporter = true
-                    }
+                Menu {
+                    Button(action: { showingPUPImporter = true }) { Label("Install Official PUP", systemImage: "checkmark.shield") }
+                    Button(action: { showingVitaFSImporter = true }) { Label("Import Extracted VitaFS", systemImage: "folder") }
+                } label: {
+                    Label("Import Firmware", systemImage: "square.and.arrow.down")
                 }
                 .buttonStyle(.bordered)
 
-                Button("Boot System Software", systemImage: "play.fill") {
-                    core.bootSystemSoftware()
-                }
+                Button(action: { core.bootSystemSoftware() }) { Label("Boot System Software", systemImage: "play.fill") }
                 .buttonStyle(.borderedProminent)
                 .disabled(!core.systemSoftwareReady || core.firmwareBusy)
             }
@@ -234,7 +228,7 @@ struct RootView: View {
                 Text("Games")
                     .font(.title3.bold())
                 Spacer()
-                Button("Import", systemImage: "plus") {
+                Button(action: { showingGameImporter = true }) { Label("Import", systemImage: "plus") } // {
                     showingGameImporter = true
                 }
                     .disabled(core.gameImportBusy || core.gameLibraryBusy)
@@ -243,13 +237,12 @@ struct RootView: View {
             GameImportRequirementsCard()
 
             if core.games.isEmpty {
-                ContentUnavailableView {
-                    Label("No Games", systemImage: "rectangle.stack")
-                } description: {
+                VStack(spacing: 12) {
+                    Label("No Games", systemImage: "rectangle.stack").font(.headline)
                     Text("Import a legally dumped extracted game folder containing eboot.bin and sce_sys/param.sfo.")
-                } actions: {
-                    Button("Import Extracted Game", systemImage: "square.and.arrow.down") {
-                        showingGameImporter = true
+                        .font(.footnote).foregroundColor(.secondary).multilineTextAlignment(.center)
+                    Button(action: { showingGameImporter = true }) {
+                        Label("Import Extracted Game", systemImage: "square.and.arrow.down")
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(core.gameImportBusy || core.gameLibraryBusy)
@@ -344,7 +337,7 @@ private struct GameLibraryRow: View {
                     .foregroundStyle(.tertiary)
             }
             Spacer(minLength: 8)
-            Button("Play", systemImage: "play.fill", action: play)
+            Button(action: play) { Label("Play", systemImage: "play.fill") }
                 .buttonStyle(.borderedProminent)
                 .disabled(core.firmwareBusy)
         }
@@ -365,7 +358,7 @@ private struct GameIcon: View {
             } else {
                 Image(systemName: "gamecontroller.fill")
                     .font(.title2)
-                    .foregroundStyle(PlayStationAccent.blue)
+                    .foregroundColor(PlayStationAccent.blue)
             }
         }
         .frame(width: 58, height: 58)
