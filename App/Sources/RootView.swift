@@ -16,8 +16,35 @@ struct RootView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     header
+                        .fileImporter(
+                            isPresented: $showingPUPImporter,
+                            allowedContentTypes: [UTType(filenameExtension: "pup") ?? .data],
+                            allowsMultipleSelection: false
+                        ) { result in
+                            if case let .success(urls) = result, let url = urls.first {
+                                core.inspectFirmwarePUP(url)
+                            }
+                        }
                     readiness
+                        .fileImporter(
+                            isPresented: $showingVitaFSImporter,
+                            allowedContentTypes: [.folder],
+                            allowsMultipleSelection: false
+                        ) { result in
+                            if case let .success(urls) = result, let url = urls.first {
+                                core.importExtractedVitaFS(url)
+                            }
+                        }
                     library
+                        .fileImporter(
+                            isPresented: $showingGameImporter,
+                            allowedContentTypes: [.folder],
+                            allowsMultipleSelection: false
+                        ) { result in
+                            if case let .success(urls) = result, let url = urls.first {
+                                core.importExtractedGame(url)
+                            }
+                        }
                     firmware
                     CoreStatusCard(core: core)
                 }
@@ -34,33 +61,7 @@ struct RootView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView(core: core)
             }
-            .fileImporter(
-                isPresented: $showingPUPImporter,
-                allowedContentTypes: [UTType(filenameExtension: "pup") ?? .data],
-                allowsMultipleSelection: false
-            ) { result in
-                if case let .success(urls) = result, let url = urls.first {
-                    core.inspectFirmwarePUP(url)
-                }
-            }
-            .fileImporter(
-                isPresented: $showingVitaFSImporter,
-                allowedContentTypes: [.folder],
-                allowsMultipleSelection: false
-            ) { result in
-                if case let .success(urls) = result, let url = urls.first {
-                    core.importExtractedVitaFS(url)
-                }
-            }
-            .fileImporter(
-                isPresented: $showingGameImporter,
-                allowedContentTypes: [.folder],
-                allowsMultipleSelection: false
-            ) { result in
-                if case let .success(urls) = result, let url = urls.first {
-                    core.importExtractedGame(url)
-                }
-            }
+
             .fullScreenCover(item: $presentedGame, onDismiss: {
                 core.endDirectGameSession()
             }) { game in

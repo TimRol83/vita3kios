@@ -444,13 +444,7 @@ final class CoreStatusModel: ObservableObject {
     }
 
     private static func applicationSupportRoot() throws -> URL {
-        let base = try FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        let root = base.appendingPathComponent("vita3kios", isDirectory: true)
+        let root = URL(fileURLWithPath: "/var/mobile/Media/Vita3K", isDirectory: true)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         return root
     }
