@@ -79,6 +79,11 @@ extern "C" bool v3kios_jit_allocate(std::size_t size, std::uint32_t** writable,
 }
 
 extern "C" bool v3kios_jit_memory_available() {
+    void* mapJit = mmap(nullptr, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_PRIVATE | MAP_JIT, -1, 0);
+    if (mapJit != MAP_FAILED && mapJit != nullptr) {
+        munmap(mapJit, 4096);
+        return true;
+    }
     const long pageSize = sysconf(_SC_PAGESIZE);
     if (pageSize <= 0) return false;
     std::uint32_t* writable = nullptr;

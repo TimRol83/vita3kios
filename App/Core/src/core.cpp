@@ -219,7 +219,9 @@ bool IsExecutableContainer(const filesystem::path& executablePath) {
                      static_cast<std::streamsize>(magic.size()))) return false;
     const bool sce = magic[0] == 'S' && magic[1] == 'C' && magic[2] == 'E' && magic[3] == 0;
     const bool elf = magic[0] == 0x7fU && magic[1] == 'E' && magic[2] == 'L' && magic[3] == 'F';
-    return sce || elf;
+    std::error_code pfsErr;
+    const bool hasPfs = filesystem::is_directory(executablePath.parent_path() / "sce_pfs", pfsErr) && !pfsErr;
+    return sce || elf || hasPfs;
 }
 
 void FillInventory(const InventoryData& source, v3kios_firmware_inventory_v1& destination) {
