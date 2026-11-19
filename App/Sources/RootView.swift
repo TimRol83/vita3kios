@@ -228,9 +228,7 @@ struct RootView: View {
                 Text("Games")
                     .font(.title3.bold())
                 Spacer()
-                Button(action: { showingGameImporter = true }) { Label("Import", systemImage: "plus") } // {
-                    showingGameImporter = true
-                }
+            Button(action: { showingGameImporter = true }) { Label("Import", systemImage: "plus") }
                     .disabled(core.gameImportBusy || core.gameLibraryBusy)
             }
 
