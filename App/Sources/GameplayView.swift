@@ -57,12 +57,11 @@ struct GameplayView: View {
                 .accessibilityLabel("Close Game")
             }
         }
-        .persistentSystemOverlays(.hidden)
         .statusBarHidden()
         .onAppear {
             requestOrientation(.landscape)
         }
-        .onChange(of: input) { _, value in
+        .onChange(of: input) { value in
             core.submitInput(value)
         }
         .onReceive(metricsTimer) { _ in
@@ -78,7 +77,7 @@ struct GameplayView: View {
     private func requestOrientation(_ orientations: UIInterfaceOrientationMask) {
         let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
         for scene in scenes where scene.activationState == .foregroundActive {
-            scene.requestGeometryUpdate(.iOS(interfaceOrientations: orientations)) { _ in }
+            if #available(iOS 16.0, *) { scene.requestGeometryUpdate(.iOS(interfaceOrientations: orientations)) { _ in } } else { UIViewController.attemptRotationToDeviceOrientation() }
         }
     }
 
