@@ -20,7 +20,7 @@ struct CoreStatusCard: View {
                 HStack { Text("Core ABI"); Spacer(); Text("v\(core.abiVersion).foregroundColor(.secondary) }")
                 HStack { Text("Vita3K"); Spacer(); Text(core.upstreamVersion).foregroundColor(.secondary) }
                 HStack { Text("Platform"); Spacer(); Text(core.platform).foregroundColor(.secondary) }
-                HStack { Text("Upstream commit"); Spacer(); Text(short(core.upstreamCommit).foregroundColor(.secondary) })
+                HStack { Text("Upstream commit"); Spacer(); Text(short(core.upstreamCommit)).foregroundColor(.secondary) })
                 HStack { Text("Allocator self-test"); Spacer(); Text(core.allocatorTestPassed ? "Passed" : "Failed").foregroundColor(.secondary) }
                     .foregroundColor(core.allocatorTestPassed ? Color.primary : Color.red)
             }
