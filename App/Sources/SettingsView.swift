@@ -35,7 +35,7 @@ struct SettingsView: View {
                 Section("Interface") {
                     HStack { Text("Design"); Spacer(); Text("Apple Native").foregroundColor(.secondary) }
                     HStack { Text("Accent"); Spacer(); Text("PlayStation-inspired").foregroundColor(.secondary) }
-                    HStack { Text("Touch controls"); Spacer(); Text(availability(CoreCapability.inputState)).foregroundColor(.secondary) })
+                    HStack { Text("Touch controls"); Spacer(); Text(availability(CoreCapability.inputState)).foregroundColor(.secondary) }
                     HStack { Text("Performance HUD"); Spacer(); Text("Top-left · Compact").foregroundColor(.secondary) }
                 }
 
