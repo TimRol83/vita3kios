@@ -28,7 +28,7 @@ extern "C" bool v3kios_jit_allocate(std::size_t size, std::uint32_t** writable,
     constexpr std::uint32_t CodeSigningDebugged = 0x10000000U;
     std::uint32_t flags = 0;
     if (csops(getpid(), 0, &flags, sizeof(flags)) == 0 && (flags & CodeSigningDebugged) == 0) {
-        using ptrace_fn = int (*)(int, pid_t, caddr_t, int);
+        using ptrace_fn = int (*)(int, int, char*, int);
         if (auto* fn = reinterpret_cast<ptrace_fn>(dlsym(RTLD_DEFAULT, "ptrace"))) {
             fn(0, 0, nullptr, 0);
         }
