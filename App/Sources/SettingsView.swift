@@ -23,7 +23,7 @@ struct SettingsView: View {
                 }
 
                 Section("Core") {
-                    HStack { Text("ABI version"); Spacer(); Text("\(core.abiVersion).foregroundColor(.secondary) }")
+                    HStack { Text("ABI version"); Spacer(); Text("\(core.abiVersion)").foregroundColor(.secondary) }
                     HStack { Text("Architecture"); Spacer(); Text(core.platform).foregroundColor(.secondary) }
                     HStack { Text("Direct Game"); Spacer(); Text(availability(CoreCapability.directGame)).foregroundColor(.secondary) }
                     HStack { Text("System Software"); Spacer(); Text(availability(CoreCapability.systemSoftware)).foregroundColor(.secondary) }
