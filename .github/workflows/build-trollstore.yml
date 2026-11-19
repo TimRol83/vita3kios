@@ -4,11 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ main, master ]
-
-env:
-  IPHONEOS_DEPLOYMENT_TARGET: '15.0'
-  CMAKE_OSX_DEPLOYMENT_TARGET: '15.0'
-
+    
 jobs:
   build-tipa:
     name: Vita3K.app -> .tipa (iOS 15)
