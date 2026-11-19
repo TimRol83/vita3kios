@@ -1,3 +1,4 @@
+#include <dlfcn.h>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -26,6 +27,12 @@ extern "C" bool v3kios_jit_allocate(std::size_t size, std::uint32_t** writable,
     *executable = nullptr;
     constexpr std::uint32_t CodeSigningDebugged = 0x10000000U;
     std::uint32_t flags = 0;
+    if (csops(getpid(), 0, &flags, sizeof(flags)) == 0 && (flags & CodeSigningDebugged) == 0) {
+        using ptrace_fn = int (*)(int, pid_t, caddr_t, int);
+        if (auto* fn = reinterpret_cast<ptrace_fn>(dlsym(RTLD_DEFAULT, "ptrace"))) {
+            fn(0, 0, nullptr, 0);
+        }
+    }
     if (csops(getpid(), 0, &flags, sizeof(flags)) != 0 ||
         (flags & CodeSigningDebugged) == 0 || size < 8) return false;
 

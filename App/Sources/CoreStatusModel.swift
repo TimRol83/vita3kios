@@ -523,6 +523,29 @@ final class CoreStatusModel: ObservableObject {
         }
     }
 
+    nonisolated private static func copyDirectoryContents(from source: URL, to destination: URL) throws {
+        let fm = FileManager.default
+        try fm.createDirectory(at: destination, withIntermediateDirectories: true)
+        guard let enumerator = fm.enumerator(at: source, includingPropertiesForKeys: [.isDirectoryKey], options: []) else {
+            try fm.copyItem(at: source, to: destination)
+            return
+        }
+        for case let itemURL as URL in enumerator {
+            let relPath = itemURL.path.replacingOccurrences(of: source.path, with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            if relPath.isEmpty { continue }
+            let targetURL = destination.appendingPathComponent(relPath)
+            let isDir = (try? itemURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
+            if isDir {
+                try fm.createDirectory(at: targetURL, withIntermediateDirectories: true)
+            } else {
+                try fm.createDirectory(at: targetURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                if fm.fileExists(atPath: targetURL.path) { try? fm.removeItem(at: targetURL) }
+                let data = try Data(contentsOf: itemURL)
+                try data.write(to: targetURL, options: .atomic)
+            }
+        }
+    }
+
     nonisolated private static func copyAndInventoryGame(
         source: URL,
         supportRoot: URL,
@@ -537,7 +560,7 @@ final class CoreStatusModel: ObservableObject {
         try fileManager.createDirectory(at: generationsRoot, withIntermediateDirectories: true)
         let staging = gamesRoot.appendingPathComponent("staging-\(UUID().uuidString)", isDirectory: true)
         do {
-            try fileManager.copyItem(at: source, to: staging)
+            try Self.copyDirectoryContents(from: source, to: staging)
             let staged = inventoryGame(path: staging.path, handle: handle)
             guard staged.ready else {
                 throw GameImportError.notReady(staged.detail)
