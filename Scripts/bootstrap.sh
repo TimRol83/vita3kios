@@ -13,7 +13,7 @@ for VITA3KIOS_TOOL in git cmake ninja brew xcodebuild xcrun; do
     fi
 done
 
-for VITA3KIOS_FORMULA in openssl qt qtwebengine qtvirtualkeyboard; do
+for VITA3KIOS_FORMULA in openssl; do
     if ! VITA3KIOS_FORMULA_PREFIX=$(brew --prefix "$VITA3KIOS_FORMULA" 2>/dev/null) || \
         [ ! -d "$VITA3KIOS_FORMULA_PREFIX" ]; then
         echo "error: required Homebrew formula is missing: $VITA3KIOS_FORMULA" >&2
