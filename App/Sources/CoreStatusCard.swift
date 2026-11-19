@@ -17,7 +17,7 @@ struct CoreStatusCard: View {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
             } else {
-                HStack { Text("Core ABI"); Spacer(); Text("v\(core.abiVersion).foregroundColor(.secondary) }")
+                HStack { Text("Core ABI"); Spacer(); Text("v\(core.abiVersion)").foregroundColor(.secondary) }
                 HStack { Text("Vita3K"); Spacer(); Text(core.upstreamVersion).foregroundColor(.secondary) }
                 HStack { Text("Platform"); Spacer(); Text(core.platform).foregroundColor(.secondary) }
                 HStack { Text("Upstream commit"); Spacer(); Text(short(core.upstreamCommit)).foregroundColor(.secondary) }

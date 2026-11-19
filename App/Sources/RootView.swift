@@ -168,7 +168,7 @@ struct RootView: View {
                     .font(.subheadline)
                 HStack { Text("System Software"); Spacer(); Text(core.systemSoftwareReady ? "Shell ready" : "Shell prerequisites missing").foregroundColor(.secondary) }
                     .font(.subheadline)
-                HStack { Text("Inventory"); Spacer(); Text("\(core.firmwareFileCount).foregroundColor(.secondary) } files · \(ByteCountFormatter.string(fromByteCount: Int64(core.firmwareBytes), countStyle: .file))")
+                HStack { Text("Inventory"); Spacer(); Text("\(core.firmwareFileCount) files · \(ByteCountFormatter.string(fromByteCount: Int64(core.firmwareBytes), countStyle: .file))").foregroundColor(.secondary) }
                     .font(.subheadline)
                 if !core.shellPath.isEmpty {
                     HStack { Text("Shell"); Spacer(); Text(core.shellPath).foregroundColor(.secondary) }
