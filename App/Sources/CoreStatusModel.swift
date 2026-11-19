@@ -523,7 +523,7 @@ final class CoreStatusModel: ObservableObject {
         }
     }
 
-    nonisolated private static func resolveGameRoot(from root: URL) -> URL {
+    nonisolated private static func findExtractedGameRoot(from root: URL) -> URL {
         let fm = FileManager.default
         let hasDirect = fm.fileExists(atPath: root.appendingPathComponent("eboot.bin").path)
             && fm.fileExists(atPath: root.appendingPathComponent("sce_sys/param.sfo").path)
@@ -572,7 +572,7 @@ final class CoreStatusModel: ObservableObject {
         handle: v3kios_core_handle_t
     ) throws -> GameLibraryItem {
         let accessed = source.startAccessingSecurityScopedResource()
-        let resolvedSource = Self.resolveGameRoot(from: source)
+        let resolvedSource = Self.findExtractedGameRoot(from: source)
         defer { if accessed { source.stopAccessingSecurityScopedResource() } }
 
         let fileManager = FileManager.default
@@ -714,7 +714,7 @@ final class CoreStatusModel: ObservableObject {
 
         var info = v3kios_pup_info_v1()
         info.struct_size = UInt32(MemoryLayout<v3kios_pup_info_v1>.size)
-        let preflight = source.path.withCString {
+        let preflight = resolvedSource.path.withCString {
             v3kios_core_inspect_firmware_pup(handle, $0, &info)
         }
         guard preflight.rawValue == 0 else {
@@ -728,7 +728,7 @@ final class CoreStatusModel: ObservableObject {
         let staging = firmwareRoot.appendingPathComponent("staging-\(UUID().uuidString)", isDirectory: true)
         try fileManager.createDirectory(at: staging, withIntermediateDirectories: true)
         do {
-            let installResult = source.path.withCString { pupPath in
+            let installResult = resolvedSource.path.withCString { pupPath in
                 staging.path.withCString { vitaFsPath in
                     v3kios_core_install_firmware_pup(handle, pupPath, vitaFsPath)
                 }

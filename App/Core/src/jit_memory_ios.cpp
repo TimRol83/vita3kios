@@ -47,8 +47,7 @@ extern "C" bool v3kios_jit_allocate(std::size_t size, std::uint32_t** writable,
             }
         }
     }
-    if (csops(getpid(), 0, &flags, sizeof(flags)) != 0 ||
-        (flags & CodeSigningDebugged) == 0 || size < 8) return false;
+    if (size < 8) return false;
 
     // The original mapping must start RX. Upgrading an RW-backed alias to RX
     // can report success but still fault on the first instruction fetch.
