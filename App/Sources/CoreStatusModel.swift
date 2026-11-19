@@ -714,7 +714,7 @@ final class CoreStatusModel: ObservableObject {
 
         var info = v3kios_pup_info_v1()
         info.struct_size = UInt32(MemoryLayout<v3kios_pup_info_v1>.size)
-        let preflight = resolvedSource.path.withCString {
+        let preflight = source.path.withCString {
             v3kios_core_inspect_firmware_pup(handle, $0, &info)
         }
         guard preflight.rawValue == 0 else {
@@ -728,7 +728,7 @@ final class CoreStatusModel: ObservableObject {
         let staging = firmwareRoot.appendingPathComponent("staging-\(UUID().uuidString)", isDirectory: true)
         try fileManager.createDirectory(at: staging, withIntermediateDirectories: true)
         do {
-            let installResult = resolvedSource.path.withCString { pupPath in
+            let installResult = source.path.withCString { pupPath in
                 staging.path.withCString { vitaFsPath in
                     v3kios_core_install_firmware_pup(handle, pupPath, vitaFsPath)
                 }
