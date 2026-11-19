@@ -523,6 +523,26 @@ final class CoreStatusModel: ObservableObject {
         }
     }
 
+    nonisolated private static func resolveGameRoot(from root: URL) -> URL {
+        let fm = FileManager.default
+        let hasDirect = fm.fileExists(atPath: root.appendingPathComponent("eboot.bin").path)
+            && fm.fileExists(atPath: root.appendingPathComponent("sce_sys/param.sfo").path)
+        if hasDirect { return root }
+        if let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
+            for case let dir as URL in enumerator {
+                let relDepth = dir.pathComponents.count - root.pathComponents.count
+                if relDepth > 3 { enumerator.skipDescendants(); continue }
+                let isDir = (try? dir.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
+                if isDir
+                    && fm.fileExists(atPath: dir.appendingPathComponent("eboot.bin").path)
+                    && fm.fileExists(atPath: dir.appendingPathComponent("sce_sys/param.sfo").path) {
+                    return dir
+                }
+            }
+        }
+        return root
+    }
+
     nonisolated private static func copyDirectoryContents(from source: URL, to destination: URL) throws {
         let fm = FileManager.default
         try fm.createDirectory(at: destination, withIntermediateDirectories: true)
@@ -552,6 +572,7 @@ final class CoreStatusModel: ObservableObject {
         handle: v3kios_core_handle_t
     ) throws -> GameLibraryItem {
         let accessed = source.startAccessingSecurityScopedResource()
+        let resolvedSource = Self.resolveGameRoot(from: source)
         defer { if accessed { source.stopAccessingSecurityScopedResource() } }
 
         let fileManager = FileManager.default
@@ -560,7 +581,7 @@ final class CoreStatusModel: ObservableObject {
         try fileManager.createDirectory(at: generationsRoot, withIntermediateDirectories: true)
         let staging = gamesRoot.appendingPathComponent("staging-\(UUID().uuidString)", isDirectory: true)
         do {
-            try Self.copyDirectoryContents(from: source, to: staging)
+            try Self.copyDirectoryContents(from: resolvedSource, to: staging)
             let staged = inventoryGame(path: staging.path, handle: handle)
             guard staged.ready else {
                 throw GameImportError.notReady(staged.detail)

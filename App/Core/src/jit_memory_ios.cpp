@@ -1,3 +1,5 @@
+#include <sys/wait.h>
+#include <signal.h>
 #include <dlfcn.h>
 #include <cstddef>
 #include <cstdint>
@@ -28,9 +30,21 @@ extern "C" bool v3kios_jit_allocate(std::size_t size, std::uint32_t** writable,
     constexpr std::uint32_t CodeSigningDebugged = 0x10000000U;
     std::uint32_t flags = 0;
     if (csops(getpid(), 0, &flags, sizeof(flags)) == 0 && (flags & CodeSigningDebugged) == 0) {
-        using ptrace_fn = int (*)(int, int, char*, int);
+        using ptrace_fn = int (*)(int, pid_t, char*, int);
         if (auto* fn = reinterpret_cast<ptrace_fn>(dlsym(RTLD_DEFAULT, "ptrace"))) {
-            fn(0, 0, nullptr, 0);
+            pid_t parent = getpid();
+            pid_t pid = fork();
+            if (pid == 0) {
+                if (fn(10, parent, nullptr, 0) == 0) {
+                    int status = 0;
+                    waitpid(parent, &status, 0);
+                    fn(11, parent, nullptr, SIGCONT);
+                }
+                _exit(0);
+            } else if (pid > 0) {
+                int status = 0;
+                waitpid(pid, &status, 0);
+            }
         }
     }
     if (csops(getpid(), 0, &flags, sizeof(flags)) != 0 ||
