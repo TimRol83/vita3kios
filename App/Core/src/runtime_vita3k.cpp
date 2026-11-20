@@ -184,16 +184,20 @@ bool InitializeCore(const filesystem::path& supportRoot,
     emuenv->cfg.current_config.backend_renderer = "Vulkan";
     emuenv->cfg.current_config.validation_layer = false;
     emuenv->cfg.current_config.audio_backend = "SDL";
+    v3k_trace("3a: before enumerate_vulkan_devices");
     emuenv->vulkan_device_info =
         std::make_unique<renderer::VulkanDeviceInfo>(renderer::enumerate_vulkan_devices());
-
+    v3k_trace("3b: before init_libraries");
     app::reset_controller_binding(*emuenv);
     init_libraries(*emuenv);
+    v3k_trace("3c: before init_apps_list");
     if (!app::init_apps_list(*emuenv)) return false;
+    v3k_trace("3d: before load_users");
     app::load_users(*emuenv);
     if (!app::ensure_current_user(*emuenv)) return false;
+    v3k_trace("3e: before refresh_controllers");
     refresh_controllers(emuenv->ctrl, *emuenv);
-
+    v3k_trace("3f: before AppSessionController");
     state.session = std::make_unique<app::AppSessionController>(*emuenv);
     state.emuenv = std::move(emuenv);
     return true;
