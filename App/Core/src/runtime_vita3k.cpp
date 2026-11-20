@@ -140,6 +140,14 @@ bool PrepareRuntimePaths(const filesystem::path& supportRoot,
     return true;
 }
 
+static void v3k_trace(const char* msg) {
+    if (FILE* f = std::fopen("/var/mobile/Media/Vita3K/boot_trace.txt", "a")) {
+        std::fprintf(f, "%s\n", msg);
+        std::fflush(f);
+        std::fclose(f);
+    }
+}
+
 bool InitializeCore(const filesystem::path& supportRoot,
                     const filesystem::path& gameRoot,
                     const filesystem::path& firmwareRoot,
@@ -162,10 +170,13 @@ bool InitializeCore(const filesystem::path& supportRoot,
     if (config::init_config(config, 1, arguments, roots, false) != Success) return false;
 
     config.set_vita_fs_path(roots.get_vita_fs_path());
+    v3k_trace("1: before config");
     config.backend_renderer = "Vulkan";
     config.validation_layer = false;
     config.audio_backend = "SDL";
+    v3k_trace("2: before app::init");
     if (!app::init(*emuenv, config, roots)) return false;
+    v3k_trace("3: after app::init");
 
     emuenv->cfg.current_config.backend_renderer = "Vulkan";
     emuenv->cfg.current_config.validation_layer = false;
@@ -247,6 +258,7 @@ DirectBootResult BootDirectGame(const filesystem::path& gameRoot,
     }
 
     AppLaunchRequest request{.app_path = titleId};
+    v3k_trace("4: before begin_launch");
     if (!state.session->begin_launch(request)) {
         StopSessionLocked();
         return {
@@ -273,6 +285,7 @@ DirectBootResult BootDirectGame(const filesystem::path& gameRoot,
         }
     }
     state.frameHost = std::make_unique<IOSFrameHost>(state.surface);
+    v3k_trace("5: before initialize_renderer");
     if (!state.session->initialize_renderer(*state.frameHost)) {
         StopSessionLocked();
         return {
