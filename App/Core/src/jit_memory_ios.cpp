@@ -1,3 +1,4 @@
+#include <sys/sysctl.h>
 #include <dlfcn.h>
 #include <sys/wait.h>
 #include <signal.h>
@@ -50,6 +51,14 @@ extern "C" bool v3kios_jit_allocate(std::size_t size, std::uint32_t** writable,
     }
     if (size < 8) return false;
 
+  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()};
+  struct kinfo_proc info {};
+  size_t info_size = sizeof(info);
+  const bool traced = (sysctl(mib, 4, &info, &info_size, nullptr, 0) == 0) &&
+                      ((info.kp_proc.p_flag & P_TRACED) != 0);
+  if (!traced) {
+    return false;
+  }
   void* rwx = mmap(nullptr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
                    MAP_ANON | MAP_PRIVATE, -1, 0);
   if (rwx != MAP_FAILED && rwx != nullptr) {
