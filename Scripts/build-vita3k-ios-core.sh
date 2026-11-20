@@ -85,8 +85,8 @@ if "VK_KHR_portability_enumeration" not in txt:
             f"{ind}{call}"
         ]
         return nl.join(lines)
-    txt, n = re.subn(pat, repl, txt, count=1)
-    assert n == 1, "createInstance not matched"
+    txt, n = re.subn(pat, repl, txt, count=0)
+    assert n >= 2, "createInstance not matched"
     open(rcpp, "w").write(txt)
     print("Patched createInstance portability cleanly")
 PY
