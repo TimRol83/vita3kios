@@ -70,9 +70,8 @@ import os, re
 rcpp = os.path.join(os.environ["VITA3KIOS_SOURCE_DIR"], "vita3k/renderer/src/vulkan/renderer.cpp")
 txt = open(rcpp).read()
 if "VK_KHR_portability_enumeration" not in txt:
-    txt = txt.replace("VK_KHR_SURFACE_EXTENSION_NAME", "VK_KHR_SURFACE_EXTENSION_NAME, "VK_KHR_portability_enumeration"", 1)
-    txt, n = re.subn(r"(vk::InstanceCreateInfo\s+([A-Za-z0-9_]+)\s*\{[^;]*\};)", r"
-    .flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;", txt, count=1, flags=re.S)
+    txt = txt.replace("VK_KHR_SURFACE_EXTENSION_NAME", "VK_KHR_SURFACE_EXTENSION_NAME, " + chr(34) + "VK_KHR_portability_enumeration" + chr(34), 1)
+    txt, n = re.subn(r"(vk::InstanceCreateInfo\s+([A-Za-z0-9_]+)\s*\{[^;]*\};)", lambda m: m.group(1) + chr(10) + "    " + m.group(2) + ".flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;", txt, count=1, flags=re.S)
     assert n == 1, "InstanceCreateInfo not matched"
     open(rcpp, "w").write(txt)
 PY
