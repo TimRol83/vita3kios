@@ -24,61 +24,76 @@ void v3kios_jit_prepare_rx(void* address, std::size_t size) {
     asm volatile("" : : "r"(address), "r"(size) : "memory");
 }
 
+extern "C" kern_return_t mach_memory_entry_ownership(
+    mach_port_t mem_entry, mach_port_t owner, int ledger_tag, int ledger_flags);
+
 extern "C" bool v3kios_jit_allocate(std::size_t size, std::uint32_t** writable,
-                                     std::uint32_t** executable) {
-    *writable = nullptr;
-    *executable = nullptr;
-    constexpr std::uint32_t CodeSigningDebugged = 0x10000000U;
-    std::uint32_t flags = 0;
-    if (csops(getpid(), 0, &flags, sizeof(flags)) == 0 && (flags & CodeSigningDebugged) == 0) {
-        using ptrace_fn = int (*)(int, pid_t, char*, int);
-        if (auto* fn = reinterpret_cast<ptrace_fn>(dlsym(RTLD_DEFAULT, "ptrace"))) {
-            pid_t parent = getpid();
-            pid_t pid = fork();
-            if (pid == 0) {
-                if (fn(10, parent, nullptr, 0) == 0) {
-                    int status = 0;
-                    waitpid(parent, &status, 0);
-                    fn(11, parent, nullptr, SIGCONT);
-                }
-                _exit(0);
-            } else if (pid > 0) {
-                int status = 0;
-                waitpid(pid, &status, 0);
-            }
+                                    std::uint32_t** executable) {
+  *writable = nullptr;
+  *executable = nullptr;
+  constexpr std::uint32_t CodeSigningDebugged = 0x10000000U;
+  std::uint32_t flags = 0;
+  if (csops(getpid(), 0, &flags, sizeof(flags)) != 0 || (flags & CodeSigningDebugged) == 0) {
+    using ptrace_fn = int (*)(int, pid_t, char*, int);
+    if (auto fn = reinterpret_cast<ptrace_fn>(dlsym(RTLD_DEFAULT, "ptrace"))) {
+      pid_t parent = getpid();
+      pid_t pid = fork();
+      if (pid == 0) {
+        if (fn(10, parent, nullptr, 0) == 0) {
+          int status = 0;
+          waitpid(parent, &status, 0);
+          fn(11, parent, nullptr, SIGCONT);
         }
+        _exit(0);
+      } else if (pid > 0) {
+        int status = 0;
+        waitpid(pid, &status, 0);
+      }
     }
-    if (size < 8) return false;
+    flags = 0;
+    if (csops(getpid(), 0, &flags, sizeof(flags)) != 0 || (flags & CodeSigningDebugged) == 0) {
+      return false;
+    }
+  }
+  if (size < 8) return false;
 
-    // The original mapping must start RX. Upgrading an RW-backed alias to RX
-    // can report success but still fault on the first instruction fetch.
-    void* rx = mmap(nullptr, size, PROT_READ | PROT_EXEC,
-                    MAP_ANON | MAP_PRIVATE, -1, 0);
-    if (rx == MAP_FAILED) return false;
-    vm_address_t rw = 0;
-    vm_prot_t current = VM_PROT_NONE, maximum = VM_PROT_NONE;
-    const auto result = vm_remap(mach_task_self(), &rw, size, 0, VM_FLAGS_ANYWHERE,
-        mach_task_self(), reinterpret_cast<vm_address_t>(rx), false,
-        &current, &maximum, VM_INHERIT_NONE);
-    if (result != KERN_SUCCESS) {
-        munmap(rx, size);
-        return false;
-    }
+  const mach_port_t task = mach_task_self();
+  memory_object_size_t entry_size = static_cast<memory_object_size_t>(size);
+  mach_port_t mem_entry = MACH_PORT_NULL;
+  kern_return_t kr = mach_make_memory_entry_64(
+      task, &entry_size, 0,
+      MAP_MEM_NAMED_CREATE | VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE,
+      &mem_entry, MACH_PORT_NULL);
+  if (kr != KERN_SUCCESS || mem_entry == MACH_PORT_NULL) {
+    return false;
+  }
 
-    v3kios_jit_prepare_rx(rx, size);
-    constexpr char Marker[] = "V3KJITOK";
-    const bool prepared = std::memcmp(rx, Marker, 8) == 0;
-    if (!prepared || mprotect(reinterpret_cast<void*>(rw), size,
-                              PROT_READ | PROT_WRITE) != 0) {
-        munmap(reinterpret_cast<void*>(rw), size);
-        munmap(rx, size);
-        return false;
-    }
-    *writable = reinterpret_cast<std::uint32_t*>(rw);
-    *executable = static_cast<std::uint32_t*>(rx);
-    return true;
+  mach_memory_entry_ownership(mem_entry, TASK_NULL, 0, (1 << 8));
+
+  vm_address_t rw_addr = 0;
+  kr = vm_map(task, &rw_addr, size, 0, VM_FLAGS_ANYWHERE, mem_entry, 0, FALSE,
+              VM_PROT_READ | VM_PROT_WRITE, VM_PROT_READ | VM_PROT_WRITE,
+              VM_INHERIT_DEFAULT);
+  if (kr != KERN_SUCCESS) {
+    mach_port_deallocate(task, mem_entry);
+    return false;
+  }
+
+  vm_address_t rx_addr = 0;
+  kr = vm_map(task, &rx_addr, size, 0, VM_FLAGS_ANYWHERE, mem_entry, 0, FALSE,
+              VM_PROT_READ | VM_PROT_EXECUTE,
+              VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE,
+              VM_INHERIT_DEFAULT);
+  mach_port_deallocate(task, mem_entry);
+  if (kr != KERN_SUCCESS) {
+    vm_deallocate(task, rw_addr, size);
+    return false;
+  }
+
+  *writable = reinterpret_cast<std::uint32_t*>(rw_addr);
+  *executable = reinterpret_cast<std::uint32_t*>(rx_addr);
+  return true;
 }
-
 
 static void try_dopamine_enable_jit() {
     static bool attempted = false;
