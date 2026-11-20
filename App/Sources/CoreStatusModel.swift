@@ -1,3 +1,4 @@
+import UIKit
 import Foundation
 import Combine
 import QuartzCore
@@ -87,8 +88,34 @@ final class CoreStatusModel: ObservableObject {
         writeReadinessReport()
     }
 
+    private var didAutoRequestJIT = false
+
     func refreshJITStatus() {
         jitEnabled = v3kios_core_is_jit_enabled() != 0
+        if !jitEnabled && !didAutoRequestJIT {
+            didAutoRequestJIT = true
+            requestTrollStoreJIT()
+        }
+    }
+
+    func requestTrollStoreJIT() {
+        jitEnabled = v3kios_core_is_jit_enabled() != 0
+        guard !jitEnabled,
+              let bundleID = Bundle.main.bundleIdentifier,
+              let url = URL(string: "apple-magnifier://enable-jit?bundle-id=\(bundleID)") else { return }
+        UIApplication.shared.open(url, options: [:]) { _ in
+            let deadline = Date().addingTimeInterval(15)
+            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+                self.jitEnabled = v3kios_core_is_jit_enabled() != 0
+                if self.jitEnabled || Date() >= deadline {
+                    timer.invalidate()
+                }
+            }
+        }
     }
 
     func inspectFirmwarePUP(_ url: URL) {

@@ -122,11 +122,14 @@ struct RootView: View {
                 )
                 ReadinessCard(
                     title: "JIT",
-                    detail: core.jitEnabled ? "Dynamic CPU execution is enabled." : "Required before starting a game.",
+                    detail: core.jitEnabled ? "Dynamic CPU execution is enabled." : "Tap to enable JIT via TrollStore.",
                     symbol: "bolt.fill",
                     color: PlayStationAccent.green,
                     ready: core.jitEnabled
                 )
+                .onTapGesture {
+                    core.requestTrollStoreJIT()
+                }
                 ReadinessCard(
                     title: "Renderer",
                     detail: core.has(CoreCapability.directGame) ? "Vita3K MoltenVK runtime is linked." : "Full renderer runtime is unavailable.",
