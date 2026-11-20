@@ -1,3 +1,6 @@
+#include <mach-o/dyld.h>
+#include <cstdio>
+#include <cstdlib>
 #include "runtime.h"
 
 #include <app/functions.h>
@@ -254,6 +257,21 @@ DirectBootResult BootDirectGame(const filesystem::path& gameRoot,
         };
     }
 
+    {
+        char exe_path[2048] = {0};
+        uint32_t exe_size = sizeof(exe_path);
+        if (_NSGetExecutablePath(exe_path, &exe_size) == 0) {
+            const char *tmp_dir = std::getenv("TMPDIR");
+            if (!tmp_dir || *tmp_dir == 0) tmp_dir = "/tmp/";
+            std::string icd_file = std::string(tmp_dir) + "/MoltenVK_icd.json";
+            if (FILE *fp = std::fopen(icd_file.c_str(), "w")) {
+                std::fprintf(fp, "{\n  \"file_format_version\": \"1.0.0\",\n  \"ICD\": {\n    \"library_path\": \"%s\",\n    \"api_version\": \"1.3.0\"\n  }\n}\n", exe_path);
+                std::fclose(fp);
+                setenv("VK_DRIVER_FILES", icd_file.c_str(), 1);
+                setenv("VK_ICD_FILENAMES", icd_file.c_str(), 1);
+            }
+        }
+    }
     state.frameHost = std::make_unique<IOSFrameHost>(state.surface);
     if (!state.session->initialize_renderer(*state.frameHost)) {
         StopSessionLocked();
