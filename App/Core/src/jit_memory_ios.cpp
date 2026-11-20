@@ -1,4 +1,3 @@
-#include <sys/sysctl.h>
 #include <dlfcn.h>
 #include <sys/wait.h>
 #include <signal.h>
@@ -50,20 +49,6 @@ extern "C" bool v3kios_jit_allocate(std::size_t size, std::uint32_t** writable,
         }
     }
     if (size < 8) return false;
-
-  uint32_t cs_flags = 0;
-  const bool cs_debugged = (csops(getpid(), 0, &cs_flags, sizeof(cs_flags)) == 0) &&
-                           ((cs_flags & 0x10000000U) != 0);
-  if (!cs_debugged) {
-    return false;
-  }
-  void* rwx = mmap(nullptr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
-                   MAP_ANON | MAP_PRIVATE, -1, 0);
-  if (rwx != MAP_FAILED && rwx != nullptr) {
-    *writable = static_cast<std::uint32_t*>(rwx);
-    *executable = static_cast<std::uint32_t*>(rwx);
-    return true;
-  }
 
     // The original mapping must start RX. Upgrading an RW-backed alias to RX
     // can report success but still fault on the first instruction fetch.
