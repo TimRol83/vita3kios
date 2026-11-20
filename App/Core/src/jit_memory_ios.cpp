@@ -118,32 +118,20 @@ static void try_dopamine_enable_jit() {
     }
 }
 
+extern "C" int csops(pid_t pid, unsigned int ops, void *useraddr, size_t usersize);
+
 extern "C" bool v3kios_jit_memory_available() {
     try_dopamine_enable_jit();
+    uint32_t cs_flags = 0;
+    if (csops(getpid(), 0, &cs_flags, sizeof(cs_flags)) == 0 && (cs_flags & 0x10000000u) != 0) {
+        return true;
+    }
     void* mapJit = mmap(nullptr, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_PRIVATE | MAP_JIT, -1, 0);
     if (mapJit != MAP_FAILED && mapJit != nullptr) {
         munmap(mapJit, 4096);
         return true;
     }
-    const long pageSize = sysconf(_SC_PAGESIZE);
-    if (pageSize <= 0) return false;
-    std::uint32_t* writable = nullptr;
-    std::uint32_t* executable = nullptr;
-    if (!v3kios_jit_allocate(static_cast<std::size_t>(pageSize),
-                              &writable, &executable)) return false;
-    // Verify both initial execution and rewriting through the permanent alias.
-    constexpr std::uint32_t first[] = {0x52800540U, 0xD65F03C0U}; // return 42
-    std::memcpy(writable, first, sizeof(first));
-    sys_icache_invalidate(executable, sizeof(first));
-    using Probe = std::uint32_t (*)();
-    const auto run = reinterpret_cast<Probe>(executable);
-    const bool initial = std::memcmp(executable, first, sizeof(first)) == 0 && run() == 42;
-    writable[0] = 0x52800560U; // return 43
-    sys_icache_invalidate(executable, sizeof(first));
-    const bool rewritten = executable[0] == writable[0] && run() == 43;
-    munmap(writable, static_cast<std::size_t>(pageSize));
-    munmap(executable, static_cast<std::size_t>(pageSize));
-    return initial && rewritten;
+    return false;
 }
 #endif
 #endif
