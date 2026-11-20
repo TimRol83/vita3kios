@@ -1,3 +1,4 @@
+#include <dlfcn.h>
 #include <sys/wait.h>
 #include <signal.h>
 #include <dlfcn.h>
@@ -78,7 +79,32 @@ extern "C" bool v3kios_jit_allocate(std::size_t size, std::uint32_t** writable,
     return true;
 }
 
+
+static void try_dopamine_enable_jit() {
+    static bool attempted = false;
+    if (attempted) return;
+    attempted = true;
+    const char* paths[] = {
+        "/var/jb/basebin/libjailbreak.dylib",
+        "/usr/lib/libjailbreak.dylib"
+    };
+    for (const char* path : paths) {
+        void* handle = dlopen(path, RTLD_NOW);
+        if (!handle) continue;
+        using CheckinFn = int (*)(const char**, const char**, const char**, void**);
+        if (auto checkin = reinterpret_cast<CheckinFn>(dlsym(handle, "jbclient_process_checkin"))) {
+            checkin(nullptr, nullptr, nullptr, nullptr);
+        }
+        using CsAllowFn = int (*)(pid_t);
+        if (auto csAllow = reinterpret_cast<CsAllowFn>(dlsym(handle, "jbclient_cs_allow_invalid"))) {
+            csAllow(getpid());
+        }
+        break;
+    }
+}
+
 extern "C" bool v3kios_jit_memory_available() {
+    try_dopamine_enable_jit();
     void* mapJit = mmap(nullptr, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_PRIVATE | MAP_JIT, -1, 0);
     if (mapJit != MAP_FAILED && mapJit != nullptr) {
         munmap(mapJit, 4096);
