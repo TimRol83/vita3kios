@@ -53,7 +53,13 @@ jobs:
           <dict>
             <key>get-task-allow</key>
             <true/>
-            <key>dynamic-codesigning</key>
+            <key>get-task-allow</key>
+          <true/>
+          <key>com.apple.security.cs.allow-jit</key>
+          <true/>
+          <key>com.apple.developer.kernel.increased-memory-limit</key>
+          <true/>
+          <key>dynamic-codesigning</key>
             <true/>
             <key>com.apple.private.security.no-sandbox</key>
             <true/>
