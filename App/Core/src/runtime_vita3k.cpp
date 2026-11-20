@@ -140,8 +140,10 @@ bool PrepareRuntimePaths(const filesystem::path& supportRoot,
     return true;
 }
 
+static std::string g_trace_path;
 static void v3k_trace(const char* msg) {
-    if (FILE* f = std::fopen("/var/mobile/Media/Vita3K/boot_trace.txt", "a")) {
+    if (g_trace_path.empty()) return;
+    if (FILE* f = std::fopen(g_trace_path.c_str(), "a")) {
         std::fprintf(f, "%s\n", msg);
         std::fflush(f);
         std::fclose(f);
@@ -170,6 +172,7 @@ bool InitializeCore(const filesystem::path& supportRoot,
     if (config::init_config(config, 1, arguments, roots, false) != Success) return false;
 
     config.set_vita_fs_path(roots.get_vita_fs_path());
+    g_trace_path = (roots.get_vita_fs_path() / "boot_trace.txt").string();
     v3k_trace("1: before config");
     config.backend_renderer = "Vulkan";
     config.validation_layer = false;
