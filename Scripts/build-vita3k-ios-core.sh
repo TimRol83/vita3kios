@@ -65,9 +65,9 @@ fi
 
 VITA3KIOS_SYSROOT=$(xcrun --sdk iphoneos --show-sdk-path)
 
-python3 - << 'PY'
-import os, re
-rcpp = os.path.join(os.environ["VITA3KIOS_SOURCE_DIR"], "vita3k/renderer/src/vulkan/renderer.cpp")
+python3 - "$VITA3KIOS_SOURCE_DIR" << 'PY'
+import sys, os, re
+rcpp = os.path.join(sys.argv.pop(), "vita3k/renderer/src/vulkan/renderer.cpp")
 txt = open(rcpp).read()
 if "VK_KHR_portability_enumeration" not in txt:
     txt = txt.replace("VK_KHR_SURFACE_EXTENSION_NAME", "VK_KHR_SURFACE_EXTENSION_NAME, " + chr(34) + "VK_KHR_portability_enumeration" + chr(34), 1)
