@@ -70,17 +70,25 @@ import sys, os, re
 rcpp = os.path.join(sys.argv.pop(), "vita3k/renderer/src/vulkan/renderer.cpp")
 txt = open(rcpp).read()
 if "VK_KHR_portability_enumeration" not in txt:
-    txt, n1 = re.subn(r"([A-Za-z0-9_]+)\.push_back\(\s*VK_KHR_SURFACE_EXTENSION_NAME\s*\);",
-                      lambda m: m.group(0) + chr(10) + "    " + m.group(1) + ".push_back(" + chr(34) + "VK_KHR_portability_enumeration" + chr(34) + ");" + chr(10) + "    " + m.group(1) + ".push_back(" + chr(34) + "VK_KHR_get_physical_device_properties2" + chr(34) + ");",
-                      txt, count=1)
-    assert n1 == 1, "SURFACE push_back not matched"
-    pat2 = r"([ \t]*)([^" + chr(10) + r";]*vk::createInstance(?:Unique)?\(\s*([A-Za-z0-9_]+))"
-    txt, n2 = re.subn(pat2,
-                      lambda m: m.group(1) + m.group(3) + ".flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;" + chr(10) + m.group(0),
-                      txt, count=1)
-    assert n2 == 1, "createInstance not matched"
+    pat = r"([ \t]*)([^" + chr(10) + r";]*vk::createInstance(?:Unique)?\(\s*([A-Za-z0-9_]+))"
+    def repl(m):
+        ind, call, var = m.group(1), m.group(2), m.group(3)
+        q = chr(34)
+        nl = chr(10)
+        lines = [
+            f"{ind}std::vector<const char*> v3k_port_exts({var}.ppEnabledExtensionNames, {var}.ppEnabledExtensionNames + {var}.enabledExtensionCount);",
+            f"{ind}v3k_port_exts.push_back({q}VK_KHR_portability_enumeration{q});",
+            f"{ind}v3k_port_exts.push_back({q}VK_KHR_get_physical_device_properties2{q});",
+            f"{ind}{var}.enabledExtensionCount = static_cast<uint32_t>(v3k_port_exts.size());",
+            f"{ind}{var}.ppEnabledExtensionNames = v3k_port_exts.data();",
+            f"{ind}{var}.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;",
+            f"{ind}{call}"
+        ]
+        return nl.join(lines)
+    txt, n = re.subn(pat, repl, txt, count=1)
+    assert n == 1, "createInstance not matched"
     open(rcpp, "w").write(txt)
-    print("Patched renderer.cpp portability flags successfully")
+    print("Patched createInstance portability cleanly")
 PY
 
 cmake -S "$VITA3KIOS_SOURCE_DIR" -B "$VITA3KIOS_BUILD_DIR" -G Ninja \
