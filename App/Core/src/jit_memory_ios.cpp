@@ -51,12 +51,10 @@ extern "C" bool v3kios_jit_allocate(std::size_t size, std::uint32_t** writable,
     }
     if (size < 8) return false;
 
-  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()};
-  struct kinfo_proc info {};
-  size_t info_size = sizeof(info);
-  const bool traced = (sysctl(mib, 4, &info, &info_size, nullptr, 0) == 0) &&
-                      ((info.kp_proc.p_flag & P_TRACED) != 0);
-  if (!traced) {
+  uint32_t cs_flags = 0;
+  const bool cs_debugged = (csops(getpid(), 0, &cs_flags, sizeof(cs_flags)) == 0) &&
+                           ((cs_flags & 0x10000000U) != 0);
+  if (!cs_debugged) {
     return false;
   }
   void* rwx = mmap(nullptr, size, PROT_READ | PROT_WRITE | PROT_EXEC,
