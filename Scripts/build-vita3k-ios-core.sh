@@ -74,8 +74,8 @@ if "VK_KHR_portability_enumeration" not in txt:
                       lambda m: m.group(0) + chr(10) + "    " + m.group(1) + ".push_back(" + chr(34) + "VK_KHR_portability_enumeration" + chr(34) + ");" + chr(10) + "    " + m.group(1) + ".push_back(" + chr(34) + "VK_KHR_get_physical_device_properties2" + chr(34) + ");",
                       txt, count=1)
     assert n1 == 1, "SURFACE push_back not matched"
-    txt, n2 = re.subn(r"([ 	]*)([^
-;]*vk::createInstance(?:Unique)?\(\s*([A-Za-z0-9_]+))",
+    pat2 = r"([ \t]*)([^" + chr(10) + r";]*vk::createInstance(?:Unique)?\(\s*([A-Za-z0-9_]+))"
+    txt, n2 = re.subn(pat2,
                       lambda m: m.group(1) + m.group(3) + ".flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;" + chr(10) + m.group(0),
                       txt, count=1)
     assert n2 == 1, "createInstance not matched"
