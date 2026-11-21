@@ -151,10 +151,10 @@ if "VK_KHR_portability_enumeration" not in txt:
     txt, n = re.subn(pat, repl, txt, count=0)
     assert n >= 2, "createInstance not matched"
     open(rcpp, "w").write(txt)
-    txt = "#include <cstdio>\n" + txt.replace(
-        "return false;",
-        '{ std::fprintf(stderr, "[v3kios] vk_renderer false at line %d\\n", __LINE__); return false; }'
-    )
+    idx = txt.find("bool VKState::create(")
+    assert idx != -1, "VKState::create not found"
+    brace = txt.find("{", idx)
+    txt = "#include <cstdio>\n" + txt[:brace+1] + '\n    std::fprintf(stderr, "[v3kios] VKState::create step 0\\n");' + txt[brace+1:]
     open(rcpp, "w").write(txt)
     rinit = os.path.join(os.path.dirname(rcpp), "..", "renderer.cpp")
     if os.path.exists(rinit):
