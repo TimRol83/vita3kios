@@ -1,24 +1,24 @@
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 #import <objc/runtime.h>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <execinfo.h>
 #include <signal.h>
 #include <unistd.h>
 
 static void v3k_crash_sig(int sig) {
-    void **frames = (void **)std::malloc(sizeof(void *) * 32);
+    void **frames = (void **)malloc(sizeof(void *) * 32);
     int n = frames ? backtrace(frames, 32) : 0;
     const char *hdr = "\n[v3kios] CRASH SIGNAL\n";
-    write(STDERR_FILENO, hdr, std::strlen(hdr));
+    write(STDERR_FILENO, hdr, strlen(hdr));
     if (frames && n > 0) backtrace_symbols_fd(frames, n, STDERR_FILENO);
     _exit(128 + sig);
 }
 
-static id (*orig_newPSO)(id, SEL, MTLRenderPipelineDescriptor *, NSError **);
-static id (*orig_newPSOOpts)(id, SEL, MTLRenderPipelineDescriptor *, MTLPipelineOption, MTLAutoreleasedRenderPipelineReflection **, NSError **);
+static IMP orig_newPSO = NULL;
+static IMP orig_newPSOOpts = NULL;
 
 static void sanitize_pso_desc(MTLRenderPipelineDescriptor *desc) {
     if (!desc) return;
@@ -40,15 +40,18 @@ static void sanitize_pso_desc(MTLRenderPipelineDescriptor *desc) {
     }
 }
 
-static id safe_newPSO(id self, SEL _cmd, MTLRenderPipelineDescriptor *desc, NSError **error) {
+static id safe_newPSO(id self, SEL _cmd, MTLRenderPipelineDescriptor *desc, NSError * __autoreleasing *error) {
     sanitize_pso_desc(desc);
-    return orig_newPSO(self, _cmd, desc, error);
+    typedef id (*Fn)(id, SEL, MTLRenderPipelineDescriptor *, NSError * __autoreleasing *);
+    return ((Fn)orig_newPSO)(self, _cmd, desc, error);
 }
 
 static id safe_newPSOOpts(id self, SEL _cmd, MTLRenderPipelineDescriptor *desc, MTLPipelineOption opts,
-                          MTLAutoreleasedRenderPipelineReflection **refl, NSError **error) {
+                          MTLRenderPipelineReflection * __autoreleasing *refl, NSError * __autoreleasing *error) {
     sanitize_pso_desc(desc);
-    return orig_newPSOOpts(self, _cmd, desc, opts, refl, error);
+    typedef id (*Fn)(id, SEL, MTLRenderPipelineDescriptor *, MTLPipelineOption,
+                     MTLRenderPipelineReflection * __autoreleasing *, NSError * __autoreleasing *);
+    return ((Fn)orig_newPSOOpts)(self, _cmd, desc, opts, refl, error);
 }
 
 __attribute__((constructor))
@@ -64,14 +67,14 @@ static void install_v3k_a9_pso_guard(void) {
     SEL s1 = @selector(newRenderPipelineStateWithDescriptor:error:);
     Method m1 = class_getInstanceMethod(cls, s1);
     if (m1) {
-        orig_newPSO = (void *)method_getImplementation(m1);
+        orig_newPSO = method_getImplementation(m1);
         method_setImplementation(m1, (IMP)safe_newPSO);
     }
     SEL s2 = @selector(newRenderPipelineStateWithDescriptor:options:reflection:error:);
     Method m2 = class_getInstanceMethod(cls, s2);
     if (m2) {
-        orig_newPSOOpts = (void *)method_getImplementation(m2);
+        orig_newPSOOpts = method_getImplementation(m2);
         method_setImplementation(m2, (IMP)safe_newPSOOpts);
     }
-    std::fprintf(stderr, "[v3kios] A9 Metal PSO + signal guard installed on %s\n", [dev.name UTF8String]);
+    fprintf(stderr, "[v3kios] A9 Metal PSO + signal guard installed on %s\n", [dev.name UTF8String]);
 }
