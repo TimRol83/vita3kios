@@ -56,7 +56,12 @@ txt = open(fn).read()
 target = "vk::createInstance("
 assert target in txt, "vk::createInstance( not found in renderer.cpp"
 helper = """static vk::Instance v3kios_create_vulkan_instance(vk::InstanceCreateInfo info) {
-    auto supported_props = vk::enumerateInstanceExtensionProperties();
+    uint32_t prop_count = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &prop_count, nullptr);
+    std::vector<VkExtensionProperties> supported_props(prop_count);
+    if (prop_count > 0) {
+        vkEnumerateInstanceExtensionProperties(nullptr, &prop_count, supported_props.data());
+    }
     auto is_supported = [&](const char *name) {
         if (!name) return false;
         for (const auto &prop : supported_props) {
@@ -82,15 +87,24 @@ helper = """static vk::Instance v3kios_create_vulkan_instance(vk::InstanceCreate
         if (!has_port) exts.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
         info.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
     }
+    info.pNext = nullptr;
+    info.enabledLayerCount = 0;
+    info.ppEnabledLayerNames = nullptr;
     info.enabledExtensionCount = static_cast<uint32_t>(exts.size());
     info.ppEnabledExtensionNames = exts.data();
     vk::ApplicationInfo app_copy;
     if (info.pApplicationInfo) {
         app_copy = *info.pApplicationInfo;
+        app_copy.pNext = nullptr;
         app_copy.apiVersion = VK_API_VERSION_1_1;
         info.pApplicationInfo = &app_copy;
     }
-    return vk::createInstance(info);
+    VkInstance raw_instance = VK_NULL_HANDLE;
+    VkResult res = vkCreateInstance(reinterpret_cast<const VkInstanceCreateInfo *>(&info), nullptr, &raw_instance);
+    if (res != VK_SUCCESS) {
+        throw std::runtime_error("vkCreateInstance failed with VkResult=" + std::to_string(static_cast<int>(res)) + " props=" + std::to_string(prop_count) + " exts=" + std::to_string(exts.size()));
+    }
+    return vk::Instance(raw_instance);
 }
 
 bool VKState::create("""
