@@ -70,7 +70,8 @@ if [ "$VITA3KIOS_SIGNING" = "YES" ]; then
 else
     cmake --build "$VITA3KIOS_BUILD_DIR" --config Release --target vita3kios -- \
         -sdk "$VITA3KIOS_SYSROOT" \
-        CODE_SIGNING_ALLOWED=NO
+        CODE_SIGNING_ALLOWED=NO \
+        SWIFT_ENABLE_EXPLICIT_MODULES=NO
 fi
 
 echo "app_mode=$VITA3KIOS_MODE"
