@@ -1,4 +1,3 @@
-#include <exception>
 #include <execinfo.h>
 #include <cstdlib>
 #include <mach-o/dyld.h>
@@ -325,18 +324,7 @@ DirectBootResult BootDirectGame(const filesystem::path& gameRoot,
     bool renderer_ok = false;
     std::string renderer_err = "Vita3K initialized, but MoltenVK could not create the iOS render surface.";
     try {
-        renderer_ok = state.session->[&]() -> bool {
-            try {
-                return initialize_renderer(*state.frameHost);
-            } catch (const std::exception &e) {
-                std::string msg = std::string("6: initialize_renderer EXCEPTION: ") + e.what();
-                v3k_trace(msg.c_str());
-                return false;
-            } catch (...) {
-                v3k_trace("6: initialize_renderer UNKNOWN EXCEPTION");
-                return false;
-            }
-        }();
+        renderer_ok = state.session->initialize_renderer(*state.frameHost);
     } catch (const std::exception &e) {
         renderer_err = std::string("initialize_renderer exception: ") + e.what();
         v3k_trace(renderer_err.c_str());
