@@ -18,7 +18,8 @@ if(VITA3KIOS_FULL_CORE)
     if(NOT EXISTS "${VITA3KIOS_FULL_CORE_ARCHIVE}")
         message(FATAL_ERROR "Full Vita3K iOS core is missing; run Scripts/build-vita3k-ios-core.sh")
     endif()
-    set(VITA3KIOS_RUNTIME_SOURCE Core/src/runtime_vita3k.cpp)
+    set(VITA3KIOS_RUNTIME_SOURCE Core/src/runtime_vita3k.cpp
+    Core/src/a9_mtl_pso_guard.m)
 endif()
 
 execute_process(
