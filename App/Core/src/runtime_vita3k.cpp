@@ -292,15 +292,28 @@ DirectBootResult BootDirectGame(const filesystem::path& gameRoot,
     }
     state.frameHost = std::make_unique<IOSFrameHost>(state.surface);
     v3k_trace("5: before initialize_renderer");
-    if (!state.session->initialize_renderer(*state.frameHost)) {
+    bool renderer_ok = false;
+    std::string renderer_err = "Vita3K initialized, but MoltenVK could not create the iOS render surface.";
+    try {
+        renderer_ok = state.session->initialize_renderer(*state.frameHost);
+    } catch (const std::exception &e) {
+        renderer_err = std::string("initialize_renderer exception: ") + e.what();
+        v3k_trace(renderer_err.c_str());
+    } catch (...) {
+        renderer_err = "initialize_renderer unknown exception";
+        v3k_trace(renderer_err.c_str());
+    }
+    if (!renderer_ok) {
+        v3k_trace("5e: initialize_renderer failed");
         StopSessionLocked();
         return {
             .result = V3KIOS_RESULT_INTERNAL_ERROR,
             .checkpoint = V3KIOS_DIRECT_BOOT_CHECKPOINT_CORE_INITIALIZED,
             .blocker = V3KIOS_DIRECT_BOOT_BLOCKER_RENDERER_FAILED,
-            .detail = "Vita3K initialized, but MoltenVK could not create the iOS render surface.",
+            .detail = renderer_err,
         };
     }
+    v3k_trace("6: after initialize_renderer");
 
     if (!state.session->initialize_runtime()) {
         StopSessionLocked();
