@@ -9,12 +9,11 @@
 #include <unistd.h>
 
 static void v3k_crash_sig(int sig) {
-    void *frames[32];
-    int n = backtrace(frames, 32);
-    char buf[128];
-    int len = std::snprintf(buf, sizeof(buf), "\n[v3kios] SIGNAL %d backtrace (%d frames):\n", sig, n);
-    if (len > 0) write(STDERR_FILENO, buf, (size_t)len);
-    backtrace_symbols_fd(frames, n, STDERR_FILENO);
+    void **frames = (void **)std::malloc(sizeof(void *) * 32);
+    int n = frames ? backtrace(frames, 32) : 0;
+    const char *hdr = "\n[v3kios] CRASH SIGNAL\n";
+    write(STDERR_FILENO, hdr, std::strlen(hdr));
+    if (frames && n > 0) backtrace_symbols_fd(frames, n, STDERR_FILENO);
     _exit(128 + sig);
 }
 
@@ -31,7 +30,7 @@ static void sanitize_pso_desc(MTLRenderPipelineDescriptor *desc) {
         desc.stencilAttachmentPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
     }
     for (NSUInteger i = 0; i < 8; i++) {
-        MTLRenderPipelineColorAttachmentDescriptor *att = desc.colorAttachments[i];
+        MTLRenderPipelineColorAttachmentDescriptor *att = [desc.colorAttachments objectAtIndexedSubscript:i];
         if (!att) continue;
         if (att.pixelFormat == MTLPixelFormatInvalid &&
             (att.blendingEnabled || att.writeMask != MTLColorWriteMaskAll)) {
