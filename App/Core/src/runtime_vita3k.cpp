@@ -317,8 +317,8 @@ DirectBootResult BootDirectGame(const filesystem::path& gameRoot,
     }
     {
         std::string surf_buf(256, '\0');
-        std::snprintf(surf_buf.data(), surf_buf.size(), "5: before initialize_renderer layer=%p w=%u h=%u scale=%.2f",
-                      state.surface.metal_layer, state.surface.drawable_width, state.surface.drawable_height, state.surface.contents_scale);
+        std::snprintf(surf_buf.data(), surf_buf.size(), "5: before initialize_renderer layer=%p w=%u h=%u",
+                      state.surface.metal_layer, state.surface.drawable_width, state.surface.drawable_height);
         v3k_trace(surf_buf.c_str());
     }
     bool renderer_ok = false;
