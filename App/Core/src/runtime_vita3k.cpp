@@ -160,6 +160,12 @@ bool InitializeCore(const filesystem::path& supportRoot,
     if (!PrepareRuntimePaths(supportRoot, gameRoot, firmwareRoot, titleId, roots)) return false;
 
     if (logging::init(roots, true) != Success) return false;
+    {
+        std::string vlog = (roots.get_log_path() / "vita3k.log").string();
+        std::freopen(vlog.c_str(), "a", stderr);
+        std::setvbuf(stderr, nullptr, _IONBF, 0);
+        std::fprintf(stderr, "[v3kios] unbuffered stderr attached to vita3k.log\n");
+    }
 
     SDL_SetMainReady();
     if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC | SDL_INIT_SENSOR)) {
