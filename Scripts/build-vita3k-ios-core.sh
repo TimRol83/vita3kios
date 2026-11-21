@@ -151,7 +151,30 @@ if "VK_KHR_portability_enumeration" not in txt:
     txt, n = re.subn(pat, repl, txt, count=0)
     assert n >= 2, "createInstance not matched"
     open(rcpp, "w").write(txt)
-    print("Patched createInstance portability cleanly")
+    idx = txt.find("bool VKState::create(")
+    assert idx != -1, "VKState::create not found for trace"
+    brace = txt.find("{", idx)
+    next_fn = txt.find("\nbool VKState::", brace)
+    if next_fn == -1:
+        next_fn = txt.find("\nvoid VKState::", brace)
+    body = txt[brace+1:next_fn]
+    body = '\n    std::fprintf(stderr, "[v3kios] VKState::create ENTER\\n");' + body.replace(
+        "return false;",
+        '{ std::fprintf(stderr, "[v3kios] VKState::create false at line %d\\n", __LINE__); return false; }'
+    ).replace(
+        "return true;",
+        '{ std::fprintf(stderr, "[v3kios] VKState::create TRUE at line %d\\n", __LINE__); return true; }'
+    )
+    txt = "#include <cstdio>\n" + txt[:brace+1] + body + txt[next_fn:]
+    open(rcpp, "w").write(txt)
+    rinit = os.path.join(os.path.dirname(rcpp), "..", "renderer.cpp")
+    if os.path.exists(rinit):
+        rt = "#include <cstdio>\n" + open(rinit).read().replace(
+            "return false;",
+            '{ std::fprintf(stderr, "[v3kios] renderer.cpp false at line %d\\n", __LINE__); return false; }'
+        )
+        open(rinit, "w").write(rt)
+    print("Patched createInstance portability + VKState line trace cleanly")
 PY
 
 cmake -S "$VITA3KIOS_SOURCE_DIR" -B "$VITA3KIOS_BUILD_DIR" -G Ninja \
