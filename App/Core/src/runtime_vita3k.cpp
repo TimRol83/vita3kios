@@ -185,8 +185,7 @@ bool InitializeCore(const filesystem::path& supportRoot,
     emuenv->cfg.current_config.validation_layer = false;
     emuenv->cfg.current_config.audio_backend = "SDL";
     v3k_trace("3a: before enumerate_vulkan_devices");
-    emuenv->vulkan_device_info =
-        std::make_unique<renderer::VulkanDeviceInfo>(renderer::enumerate_vulkan_devices());
+    emuenv->vulkan_device_info = std::make_unique<renderer::VulkanDeviceInfo>();
     v3k_trace("3b: before init_libraries");
     app::reset_controller_binding(*emuenv);
     init_libraries(*emuenv);
