@@ -49,6 +49,43 @@ if [ "$VITA3KIOS_SOURCE_READY" -eq 0 ]; then
             tar -x -C "$VITA3KIOS_SOURCE_STAGE/$VITA3KIOS_SUBMODULE_PATH"
     done
     patch -s -d "$VITA3KIOS_SOURCE_STAGE" -p1 < "$VITA3KIOS_PATCH"
+python3 - "$VITA3KIOS_SOURCE_STAGE/vita3k/renderer/src/vulkan/renderer.cpp" << 'PY'
+import sys
+fn = sys.argv.pop()
+txt = open(fn).read()
+target = "vk::createInstance("
+assert target in txt, "vk::createInstance( not found in renderer.cpp"
+helper = """static vk::Instance v3kios_create_vulkan_instance(vk::InstanceCreateInfo info) {
+    std::vector<const char *> exts(info.ppEnabledExtensionNames, info.ppEnabledExtensionNames + info.enabledExtensionCount);
+    bool has_portability = false;
+    for (const char *ext : exts) {
+        if (ext && std::strcmp(ext, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0) {
+            has_portability = true;
+            break;
+        }
+    }
+    if (!has_portability) {
+        exts.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    }
+    info.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
+    info.enabledExtensionCount = static_cast<uint32_t>(exts.size());
+    info.ppEnabledExtensionNames = exts.data();
+    vk::ApplicationInfo app_copy;
+    if (info.pApplicationInfo) {
+        app_copy = *info.pApplicationInfo;
+        app_copy.apiVersion = VK_API_VERSION_1_1;
+        info.pApplicationInfo = &app_copy;
+    }
+    return vk::createInstance(info);
+}
+
+bool VKState::create("""
+assert "bool VKState::create(" in txt, "VKState::create not found"
+txt = txt.replace("bool VKState::create(", helper, 1)
+txt = txt.replace(target, "v3kios_create_vulkan_instance(", 1)
+open(fn, "w").write(txt)
+print("Injected MoltenVK portability enumeration wrapper into", fn)
+PY
     printf '%s\n' "$VITA3KIOS_PATCH_SHA" > "$VITA3KIOS_SOURCE_STAGE/.vita3kios-patch-sha"
     rm -rf -- "$VITA3KIOS_SOURCE_DIR"
     mv -- "$VITA3KIOS_SOURCE_STAGE" "$VITA3KIOS_SOURCE_DIR"
