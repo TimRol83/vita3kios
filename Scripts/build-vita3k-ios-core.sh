@@ -56,12 +56,7 @@ txt = open(fn).read()
 target = "vk::createInstance("
 assert target in txt, "vk::createInstance( not found in renderer.cpp"
 helper = """static vk::Instance v3kios_create_vulkan_instance(vk::InstanceCreateInfo info) {
-    uint32_t prop_count = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &prop_count, nullptr);
-    std::vector<VkExtensionProperties> supported_props(prop_count);
-    if (prop_count > 0) {
-        vkEnumerateInstanceExtensionProperties(nullptr, &prop_count, supported_props.data());
-    }
+    auto supported_props = vk::enumerateInstanceExtensionProperties();
     auto is_supported = [&](const char *name) {
         if (!name) return false;
         for (const auto &prop : supported_props) {
@@ -99,100 +94,16 @@ helper = """static vk::Instance v3kios_create_vulkan_instance(vk::InstanceCreate
         app_copy.apiVersion = VK_API_VERSION_1_1;
         info.pApplicationInfo = &app_copy;
     }
-    VkInstance raw_instance = VK_NULL_HANDLE;
-    VkResult res = vkCreateInstance(reinterpret_cast<const VkInstanceCreateInfo *>(&info), nullptr, &raw_instance);
-    if (res != VK_SUCCESS) {
-        throw std::runtime_error("vkCreateInstance failed with VkResult=" + std::to_string(static_cast<int>(res)) + " props=" + std::to_string(prop_count) + " exts=" + std::to_string(exts.size()));
-    }
-    return vk::Instance(raw_instance);
+    return vk::createInstance(info);
 }
 
 bool VKState::create("""
 assert "bool VKState::create(" in txt, "VKState::create not found"
 txt = txt.replace("bool VKState::create(", helper, 1)
-txt = txt.replace(target, "v3kios_create_vulkan_instance(", 1)
+txt = txt.replace(target, "v3kios_create_vulkan_instance(")
 open(fn, "w").write(txt)
-print("Injected MoltenVK portability enumeration wrapper into", fn)
+print("Injected MoltenVK portability + clean pNext wrapper across all vk::createInstance calls in", fn)
 PY
-    printf '%s\n' "$VITA3KIOS_PATCH_SHA" > "$VITA3KIOS_SOURCE_STAGE/.vita3kios-patch-sha"
-    rm -rf -- "$VITA3KIOS_SOURCE_DIR"
-    mv -- "$VITA3KIOS_SOURCE_STAGE" "$VITA3KIOS_SOURCE_DIR"
-fi
-
-# Check the build tree independently of the shared source tree: another checkout
-# may already have refreshed the sources while this checkout still has old objects.
-# Archive timestamps are not a reliable indicator of a patch-only source change.
-VITA3KIOS_BUILD_ID="$VITA3KIOS_UPSTREAM_REVISION:$VITA3KIOS_PATCH_SHA"
-if [ ! -f "$VITA3KIOS_BUILD_DIR/.vita3kios-source-id" ] || \
-   [ "$(sed -n '1p' "$VITA3KIOS_BUILD_DIR/.vita3kios-source-id")" != "$VITA3KIOS_BUILD_ID" ]; then
-    rm -rf -- "$VITA3KIOS_BUILD_DIR"
-fi
-
-VITA3KIOS_SYSROOT=$(xcrun --sdk iphoneos --show-sdk-path)
-
-python3 - "$VITA3KIOS_SOURCE_DIR" << 'PY'
-import sys, os, re
-rcpp = os.path.join(sys.argv.pop(), "vita3k/renderer/src/vulkan/renderer.cpp")
-txt = open(rcpp).read()
-if "VK_KHR_portability_enumeration" not in txt:
-    pat = r"([ \t]*)([^" + chr(10) + r";]*vk::createInstance(?:Unique)?\(\s*([A-Za-z0-9_]+))"
-    def repl(m):
-        ind, call, var = m.group(1), m.group(2), m.group(3)
-        q = chr(34)
-        nl = chr(10)
-        lines = [
-            f"{ind}std::vector<const char*> v3k_port_exts({var}.ppEnabledExtensionNames, {var}.ppEnabledExtensionNames + {var}.enabledExtensionCount);",
-            f"{ind}v3k_port_exts.push_back({q}VK_KHR_portability_enumeration{q});",
-            f"{ind}v3k_port_exts.push_back({q}VK_KHR_get_physical_device_properties2{q});",
-            f"{ind}uint32_t v3k_avail_cnt = 0;",
-            f"{ind}vk::enumerateInstanceExtensionProperties(nullptr, &v3k_avail_cnt, nullptr);",
-            f"{ind}std::vector<vk::ExtensionProperties> v3k_avail(v3k_avail_cnt);",
-            f"{ind}if (v3k_avail_cnt > 0) vk::enumerateInstanceExtensionProperties(nullptr, &v3k_avail_cnt, v3k_avail.data());",
-            f"{ind}std::vector<const char*> v3k_filt_exts;",
-            f"{ind}for (const char* req : v3k_port_exts) {{",
-            f"{ind}    for (const auto& prop : v3k_avail) {{",
-            f"{ind}        if (std::strcmp(req, prop.extensionName) == 0) {{ v3k_filt_exts.push_back(req); break; }}",
-            f"{ind}    }}",
-            f"{ind}}}",
-            f"{ind}{var}.enabledExtensionCount = static_cast<uint32_t>(v3k_filt_exts.size());",
-            f"{ind}{var}.ppEnabledExtensionNames = v3k_filt_exts.data();",
-            f"{ind}{var}.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;",
-            f"{ind}{call}"
-        ]
-        return nl.join(lines)
-    txt, n = re.subn(pat, repl, txt, count=0)
-    assert n >= 2, "createInstance not matched"
-    open(rcpp, "w").write(txt)
-    print("Patched createInstance portability cleanly")
-PY
-
-cmake -S "$VITA3KIOS_SOURCE_DIR" -B "$VITA3KIOS_BUILD_DIR" -G Ninja \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_SYSTEM_NAME=iOS \
-    -DCMAKE_SYSTEM_PROCESSOR=arm64 \
-    -DCMAKE_OSX_SYSROOT="$VITA3KIOS_SYSROOT" \
-    -DCMAKE_OSX_ARCHITECTURES=arm64 \
-    -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
-    -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
-    -DCMAKE_PREFIX_PATH="$VITA3KIOS_DEPENDENCY_PREFIX" \
-    -DOPENSSL_ROOT_DIR="$VITA3KIOS_DEPENDENCY_PREFIX" \
-    -DOPENSSL_USE_STATIC_LIBS=ON \
-    -DBOOST_ROOT="$VITA3KIOS_DEPENDENCY_PREFIX" \
-    -DBoost_NO_SYSTEM_PATHS=ON \
-    -DBoost_INCLUDE_DIR="$VITA3KIOS_DEPENDENCY_PREFIX/include" \
-    -DBoost_LIBRARY_DIR_RELEASE="$VITA3KIOS_DEPENDENCY_PREFIX/lib" \
-    -DBoost_FILESYSTEM_LIBRARY_RELEASE="$VITA3KIOS_DEPENDENCY_PREFIX/lib/libboost_filesystem.a" \
-    -DVITA3K_FORCE_SYSTEM_BOOST=ON \
-    -DVITA3K_IOS_DEPENDENCY_PREFIX="$VITA3KIOS_DEPENDENCY_PREFIX" \
-    -DVITA3K_IOS_MOLTENVK_ROOT="$VITA3KIOS_MOLTENVK_ROOT" \
-    -DVITA3K_IOS_METAL_LAYER_SOURCE="$VITA3KIOS_ROOT/App/Core/src/metal_layer_ios.mm" \
-    -DUSE_DISCORD_RICH_PRESENCE=OFF \
-    -DUSE_LTO=NEVER \
-    -DBUILD_TESTING=OFF \
-    -DCAPSTONE_BUILD_MACOS_THIN=ON
-
-# Record the configured source identity before compilation so an interrupted
-# build can resume its valid partial objects on the next invocation.
 printf '%s\n' "$VITA3KIOS_BUILD_ID" > "$VITA3KIOS_BUILD_DIR/.vita3kios-source-id"
 
 CCACHE_DISABLE=1 cmake --build "$VITA3KIOS_BUILD_DIR" --target vita3k \
