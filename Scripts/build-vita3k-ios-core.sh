@@ -56,18 +56,32 @@ txt = open(fn).read()
 target = "vk::createInstance("
 assert target in txt, "vk::createInstance( not found in renderer.cpp"
 helper = """static vk::Instance v3kios_create_vulkan_instance(vk::InstanceCreateInfo info) {
-    std::vector<const char *> exts(info.ppEnabledExtensionNames, info.ppEnabledExtensionNames + info.enabledExtensionCount);
-    bool has_portability = false;
-    for (const char *ext : exts) {
-        if (ext && std::strcmp(ext, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0) {
-            has_portability = true;
-            break;
+    auto supported_props = vk::enumerateInstanceExtensionProperties();
+    auto is_supported = [&](const char *name) {
+        if (!name) return false;
+        for (const auto &prop : supported_props) {
+            if (std::strcmp(prop.extensionName, name) == 0) return true;
+        }
+        return false;
+    };
+    std::vector<const char *> exts;
+    for (uint32_t i = 0; i < info.enabledExtensionCount; ++i) {
+        const char *ext = info.ppEnabledExtensionNames[i];
+        if (is_supported(ext)) {
+            exts.push_back(ext);
         }
     }
-    if (!has_portability) {
-        exts.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    if (is_supported(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
+        bool has_port = false;
+        for (const char *ext : exts) {
+            if (std::strcmp(ext, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0) {
+                has_port = true;
+                break;
+            }
+        }
+        if (!has_port) exts.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+        info.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
     }
-    info.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
     info.enabledExtensionCount = static_cast<uint32_t>(exts.size());
     info.ppEnabledExtensionNames = exts.data();
     vk::ApplicationInfo app_copy;
