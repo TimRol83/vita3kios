@@ -1,3 +1,5 @@
+#include <execinfo.h>
+#include <cstdlib>
 #include <mach-o/dyld.h>
 #include <cstdio>
 #include <cstdlib>
@@ -291,6 +293,22 @@ DirectBootResult BootDirectGame(const filesystem::path& gameRoot,
         }
     }
     state.frameHost = std::make_unique<IOSFrameHost>(state.surface);
+    static bool atexit_installed = false;
+    if (!atexit_installed) {
+        atexit_installed = true;
+        std::atexit([]() {
+            v3k_trace("ATEXIT: process exiting early, backtrace:");
+            void *frames[32];
+            int count = backtrace(frames, 32);
+            char **syms = backtrace_symbols(frames, count);
+            if (syms) {
+                for (int i = 0; i < count; ++i) {
+                    v3k_trace(syms[i]);
+                }
+                std::free(syms);
+            }
+        });
+    }
     v3k_trace("5: before initialize_renderer");
     bool renderer_ok = false;
     std::string renderer_err = "Vita3K initialized, but MoltenVK could not create the iOS render surface.";
