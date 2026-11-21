@@ -315,7 +315,12 @@ DirectBootResult BootDirectGame(const filesystem::path& gameRoot,
             }
         });
     }
-    v3k_trace("5: before initialize_renderer");
+    {
+        char surf_buf[256];
+        std::snprintf(surf_buf, sizeof(surf_buf), "5: before initialize_renderer layer=%p w=%u h=%u scale=%.2f",
+                      state.surface.metal_layer, state.surface.drawable_width, state.surface.drawable_height, state.surface.contents_scale);
+        v3k_trace(surf_buf);
+    }
     bool renderer_ok = false;
     std::string renderer_err = "Vita3K initialized, but MoltenVK could not create the iOS render surface.";
     try {
