@@ -1,3 +1,4 @@
+#pragma clang diagnostic ignored "-Weverything"
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 #import <objc/runtime.h>
